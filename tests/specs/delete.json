@@ -1,0 +1,73 @@
+[
+  {
+    "name": "/delete without note-id shows usage",
+    "steps": [
+      {
+        "send": { "text": "/delete" },
+        "expect": [
+          {
+            "method": "sendMessage",
+            "payload": { "text": "Usage: /delete <note-id>" }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "/delete non-existent note shows not found",
+    "steps": [
+      {
+        "send": { "text": "/delete 99" },
+        "expect": [
+          {
+            "method": "sendMessage",
+            "payload": { "text": "Note not found." }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "full delete flow with PIN verification",
+    "steps": [
+      { "send": { "text": "/setpin" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "mypin" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "mypin" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "/add" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "Test" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "Content" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "mypin" }, "expect": [{ "method": "sendMessage" }] },
+      {
+        "send": { "text": "/delete 1" },
+        "expect": [
+          {
+            "method": "sendMessage",
+            "payload": { "text": "Delete \"Test\"? This can't be undone." }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "delete cancel via no button",
+    "steps": [
+      { "send": { "text": "/setpin" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "mypin" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "mypin" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "/add" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "Test" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "Content" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "mypin" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "/delete 1" }, "expect": [{ "method": "sendMessage" }] },
+      {
+        "send": { "callback": "delete:no" },
+        "expect": [
+          {
+            "method": "editMessageText",
+            "payload": { "text": "Deletion cancelled." }
+          }
+        ]
+      }
+    ]
+  }
+]

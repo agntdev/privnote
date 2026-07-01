@@ -1,0 +1,54 @@
+[
+  {
+    "name": "view note flow with PIN verification",
+    "steps": [
+      { "send": { "text": "/setpin" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "mypin" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "mypin" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "/add" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "Shopping list" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "Milk, eggs, bread" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "mypin" }, "expect": [{ "method": "sendMessage" }] },
+      {
+        "send": { "callback": "view:1" },
+        "expect": [
+          {
+            "method": "sendMessage",
+            "payload": { "text": "Enter your PIN to view this note." }
+          }
+        ]
+      },
+      {
+        "send": { "text": "mypin" },
+        "expect": [
+          {
+            "method": "sendMessage",
+            "payload": { "text": "📄 Shopping list\n\nMilk, eggs, bread" }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "view note with wrong PIN retries",
+    "steps": [
+      { "send": { "text": "/setpin" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "mypin" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "mypin" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "/add" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "Test" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "Content" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "mypin" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "callback": "view:1" }, "expect": [{ "method": "sendMessage" }] },
+      {
+        "send": { "text": "wrong" },
+        "expect": [
+          {
+            "method": "sendMessage",
+            "payload": { "text": "Wrong PIN. Try again." }
+          }
+        ]
+      }
+    ]
+  }
+]

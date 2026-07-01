@@ -1,0 +1,109 @@
+[
+  {
+    "name": "/setpin starts PIN setup flow",
+    "steps": [
+      {
+        "send": { "text": "/setpin" },
+        "expect": [
+          {
+            "method": "sendMessage",
+            "payload": { "text": "Set a PIN to protect your notes. Enter a PIN you'll remember." }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "PIN too short warns and re-prompts",
+    "steps": [
+      {
+        "send": { "text": "/setpin" },
+        "expect": [{ "method": "sendMessage" }]
+      },
+      {
+        "send": { "text": "ab" },
+        "expect": [
+          {
+            "method": "sendMessage",
+            "payload": { "text": "PIN must be at least 4 characters. Try again." }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "full PIN setup flow sets verifier and confirms",
+    "steps": [
+      {
+        "send": { "text": "/setpin" },
+        "expect": [{ "method": "sendMessage" }]
+      },
+      {
+        "send": { "text": "1234" },
+        "expect": [
+          {
+            "method": "sendMessage",
+            "payload": { "text": "Now enter the same PIN again to confirm." }
+          }
+        ]
+      },
+      {
+        "send": { "text": "1234" },
+        "expect": [
+          {
+            "method": "sendMessage",
+            "payload": { "text": "✅ PIN set successfully. Your notes are now protected." }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "PIN confirmation mismatch resets flow",
+    "steps": [
+      {
+        "send": { "text": "/setpin" },
+        "expect": [{ "method": "sendMessage" }]
+      },
+      {
+        "send": { "text": "1234" },
+        "expect": [{ "method": "sendMessage" }]
+      },
+      {
+        "send": { "text": "5678" },
+        "expect": [
+          {
+            "method": "sendMessage",
+            "payload": { "text": "PINs don't match. Start over — enter a new PIN." }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "PIN already set shows change message",
+    "steps": [
+      {
+        "send": { "text": "/setpin" },
+        "expect": [{ "method": "sendMessage" }]
+      },
+      {
+        "send": { "text": "1234" },
+        "expect": [{ "method": "sendMessage" }]
+      },
+      {
+        "send": { "text": "1234" },
+        "expect": [{ "method": "sendMessage" }]
+      },
+      {
+        "send": { "text": "/setpin" },
+        "expect": [
+          {
+            "method": "sendMessage",
+            "payload": { "text": "You already have a PIN set. To change it, enter your new PIN first." }
+          }
+        ]
+      }
+    ]
+  }
+]
