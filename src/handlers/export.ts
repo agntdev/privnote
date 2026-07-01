@@ -4,6 +4,7 @@ import { inlineButton, inlineKeyboard, registerMainMenuItem } from "../toolkit/i
 import { getDomainStore } from "../store.js";
 import { verifyPin, decryptNote } from "../crypto.js";
 import { clock } from "../clock.js";
+import { deletePinMessage } from "../pin-utils.js";
 
 const composer = new Composer<Ctx>();
 
@@ -30,7 +31,7 @@ composer.callbackQuery("export:start", async (ctx) => {
   }
 
   ctx.session.step = "awaiting_pin_for_export";
-  await ctx.editMessageText("Enter your PIN to export all notes.");
+  await ctx.editMessageText("Enter your PIN to export all notes. Your PIN message will be removed after submission.");
   await ctx.reply("Type your PIN:", {
     reply_markup: { force_reply: true, input_field_placeholder: "Your PIN…" },
   });
@@ -44,12 +45,14 @@ composer.on("message:text", async (ctx, next) => {
   const store = getDomainStore();
   const cred = store.getCredential(ctx.from!.id);
   if (!cred || !verifyPin(pin, cred)) {
+    await deletePinMessage(ctx);
     await ctx.reply("Wrong PIN. Try again.", {
       reply_markup: { force_reply: true, input_field_placeholder: "Your PIN…" },
     });
     return;
   }
 
+  await deletePinMessage(ctx);
   ctx.session.step = "idle";
 
   const noteIds = store.listNoteIds(ctx.from!.id);

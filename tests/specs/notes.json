@@ -42,7 +42,7 @@
         "expect": [
           {
             "method": "sendMessage",
-            "payload": { "text": "Enter your PIN to encrypt and save this note." }
+            "payload": { "text": "Enter your PIN to encrypt and save this note. Your PIN message will be removed after submission." }
           }
         ]
       },

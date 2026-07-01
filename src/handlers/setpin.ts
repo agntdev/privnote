@@ -3,6 +3,7 @@ import type { Ctx } from "../bot.js";
 import { confirmKeyboard, registerMainMenuItem } from "../toolkit/index.js";
 import { resetDomainStore, getDomainStore } from "../store.js";
 import { createPinVerifier, verifyPin } from "../crypto.js";
+import { deletePinMessage } from "../pin-utils.js";
 
 const composer = new Composer<Ctx>();
 
@@ -26,13 +27,13 @@ async function startSetPin(ctx: Ctx) {
   if (store.hasCredential(ctx.from!.id)) {
     ctx.session.step = "awaiting_new_pin";
     await ctx.reply(
-      "You already have a PIN set. To change it, enter your new PIN first.",
+      "You already have a PIN set. To change it, enter your new PIN first. Your PIN message will be removed after submission.",
       { reply_markup: { force_reply: true, input_field_placeholder: "Enter new PIN…" } },
     );
   } else {
     ctx.session.step = "awaiting_new_pin";
     await ctx.reply(
-      "Set a PIN to protect your notes. Enter a PIN you'll remember.",
+      "Set a PIN to protect your notes. Enter a PIN you'll remember. Your PIN message will be removed after submission.",
       { reply_markup: { force_reply: true, input_field_placeholder: "Enter PIN…" } },
     );
   }
@@ -55,6 +56,8 @@ composer.on("message:text", async (ctx, next) => {
     });
     return;
   }
+  // Remove the user's PIN message from chat history
+  await deletePinMessage(ctx);
   ctx.session.step = "awaiting_new_pin_confirm";
   // Store temporarily in a new field or use a temp variable
   // We'll store it in session since it's ephemeral
@@ -73,11 +76,16 @@ composer.on("message:text", async (ctx, next) => {
   if (confirm !== original) {
     ctx.session.step = "awaiting_new_pin";
     ctx.session.addTitle = undefined;
+    // Delete the (wrong) confirmation PIN message
+    await deletePinMessage(ctx);
     await ctx.reply("PINs don't match. Start over — enter a new PIN.", {
       reply_markup: { force_reply: true, input_field_placeholder: "Enter PIN…" },
     });
     return;
   }
+
+  // Delete the confirmation PIN message
+  await deletePinMessage(ctx);
 
   const verifier = createPinVerifier(confirm);
   getDomainStore().setCredential(ctx.from!.id, verifier);

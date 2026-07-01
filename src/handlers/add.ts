@@ -3,6 +3,7 @@ import type { Ctx } from "../bot.js";
 import { registerMainMenuItem } from "../toolkit/index.js";
 import { getDomainStore } from "../store.js";
 import { encryptNote, verifyPin } from "../crypto.js";
+import { deletePinMessage } from "../pin-utils.js";
 
 const composer = new Composer<Ctx>();
 
@@ -64,7 +65,7 @@ composer.on("message:text", async (ctx, next) => {
   }
   ctx.session.addBody = body;
   ctx.session.step = "awaiting_note_pin";
-  await ctx.reply("Enter your PIN to encrypt and save this note.", {
+  await ctx.reply("Enter your PIN to encrypt and save this note. Your PIN message will be removed after submission.", {
     reply_markup: { force_reply: true, input_field_placeholder: "Your PIN…" },
   });
 });
@@ -89,6 +90,9 @@ composer.on("message:text", async (ctx, next) => {
     });
     return;
   }
+
+  // Remove the PIN message from chat history
+  await deletePinMessage(ctx);
 
   const encrypted = encryptNote(ctx.session.addBody!, pin);
   getDomainStore().createNote(ctx.from!.id, ctx.session.addTitle!, encrypted);
