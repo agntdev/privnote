@@ -1,0 +1,33 @@
+[
+  {
+    "name": "export without PIN tells user to set PIN first",
+    "steps": [
+      {
+        "send": { "callback": "export:start" },
+        "expect": [
+          {
+            "method": "editMessageText",
+            "payload": { "text": "You need to set a PIN first. Tap 🔑 Set PIN in the menu." }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "export without notes shows empty state",
+    "steps": [
+      { "send": { "text": "/setpin" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "mypin" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "mypin" }, "expect": [{ "method": "sendMessage" }] },
+      {
+        "send": { "callback": "export:start" },
+        "expect": [
+          {
+            "method": "editMessageText",
+            "payload": { "text": "No notes to export — tap 📝 Add note to create one." }
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,37 @@
+[
+  {
+    "name": "/list with no notes shows empty state",
+    "steps": [
+      {
+        "send": { "text": "/list" },
+        "expect": [
+          {
+            "method": "sendMessage",
+            "payload": { "text": "No notes yet — tap 📝 Add note to create one." }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "/list with notes shows note titles as buttons",
+    "steps": [
+      { "send": { "text": "/setpin" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "mypin" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "mypin" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "/add" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "Shopping list" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "Milk, eggs, bread" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "mypin" }, "expect": [{ "method": "sendMessage" }] },
+      {
+        "send": { "text": "/list" },
+        "expect": [
+          {
+            "method": "sendMessage",
+            "payload": { "text": "Your notes:" }
+          }
+        ]
+      }
+    ]
+  }
+]

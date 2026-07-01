@@ -2,11 +2,27 @@ import { Composer } from "grammy";
 import { readdirSync } from "node:fs";
 import { createBot, type BotContext } from "./toolkit/index.js";
 
-// The per-chat session shape (ephemeral conversation state only). Extend as the
-// bot grows. Durable domain data must NOT live here — use the toolkit's
-// persistent storage (see AGENTS.md).
+// Per-chat session state (ephemeral conversation state — NOT durable data).
+// Durable domain data (users, notes, credentials) goes in `src/store.ts`.
+export type Step =
+  | "idle"
+  | "awaiting_new_pin"
+  | "awaiting_new_pin_confirm"
+  | "awaiting_note_title"
+  | "awaiting_note_body"
+  | "awaiting_note_pin"
+  | "awaiting_pin_for_view"
+  | "awaiting_pin_for_export"
+  | "awaiting_pin_for_delete"
+  | "awaiting_delete_confirm";
+
 export interface Session {
-  // example: step?: "awaiting_amount";
+  step: Step;
+  /** Temporary flow data (reset between flows). */
+  addTitle?: string;
+  addBody?: string;
+  viewNoteId?: string;
+  deleteNoteId?: string;
 }
 
 export type Ctx = BotContext<Session>;
@@ -19,7 +35,7 @@ export type Ctx = BotContext<Session>;
  */
 export async function buildBot(token: string) {
   const bot = createBot<Session>(token, {
-    initial: () => ({}),
+    initial: () => ({ step: "idle" }),
   });
 
   const dir = new URL("./handlers/", import.meta.url);
@@ -34,7 +50,7 @@ export async function buildBot(token: string) {
     );
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-    files = []; // no handlers/ dir yet → nothing to load
+    files = [];
   }
   for (const file of files.sort()) {
     const mod = (await import(new URL(file, dir).href)) as { default?: Composer<Ctx> };
