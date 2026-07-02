@@ -3,6 +3,7 @@ import type { Ctx } from "../bot.js";
 import { inlineButton, inlineKeyboard } from "../toolkit/index.js";
 import { getDomainStore } from "../store.js";
 import { verifyPin, decryptNote } from "../crypto.js";
+import { deletePinMessage } from "../pin-utils.js";
 
 const composer = new Composer<Ctx>();
 
@@ -20,7 +21,7 @@ composer.callbackQuery(/^view:/, async (ctx) => {
   }
   ctx.session.viewNoteId = noteId;
   ctx.session.step = "awaiting_pin_for_view";
-  await ctx.reply("Enter your PIN to view this note.", {
+  await ctx.reply("Enter your PIN to view this note. Your PIN message will be removed after submission.", {
     reply_markup: { force_reply: true, input_field_placeholder: "Your PIN…" },
   });
 });
@@ -33,11 +34,16 @@ composer.on("message:text", async (ctx, next) => {
   const store = getDomainStore();
   const cred = store.getCredential(ctx.from!.id);
   if (!cred || !verifyPin(pin, cred)) {
+    // Delete the wrong PIN message too
+    await deletePinMessage(ctx);
     await ctx.reply("Wrong PIN. Try again.", {
       reply_markup: { force_reply: true, input_field_placeholder: "Your PIN…" },
     });
     return;
   }
+
+  // Remove the PIN message from chat history
+  await deletePinMessage(ctx);
 
   const noteId = ctx.session.viewNoteId;
   const note = store.getNote(noteId!);

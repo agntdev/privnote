@@ -1,6 +1,8 @@
 import { Composer } from "grammy";
 import { readdirSync } from "node:fs";
 import { createBot, type BotContext } from "./toolkit/index.js";
+import { resetDomainStore } from "./store.js";
+import { _resetMainMenu } from "./toolkit/ui/menu.js";
 
 // Per-chat session state (ephemeral conversation state — NOT durable data).
 // Durable domain data (users, notes, credentials) goes in `src/store.ts`.
@@ -34,6 +36,10 @@ export type Ctx = BotContext<Session>;
  * Composer — NEVER edit this file (concurrent feature PRs would conflict).
  */
 export async function buildBot(token: string) {
+  // Reset global singletons so each fresh bot starts clean for test isolation
+  resetDomainStore();
+  _resetMainMenu();
+
   const bot = createBot<Session>(token, {
     initial: () => ({ step: "idle" }),
   });

@@ -7,7 +7,7 @@
         "expect": [
           {
             "method": "sendMessage",
-            "payload": { "text": "Set a PIN to protect your notes. Enter a PIN you'll remember." }
+            "payload": { "text": "Set a PIN to protect your notes. Enter a PIN you'll remember. Your PIN message will be removed after submission." }
           }
         ]
       }
@@ -100,7 +100,7 @@
         "expect": [
           {
             "method": "sendMessage",
-            "payload": { "text": "You already have a PIN set. To change it, enter your new PIN first." }
+            "payload": { "text": "You already have a PIN set. To change it, enter your new PIN first. Your PIN message will be removed after submission." }
           }
         ]
       }

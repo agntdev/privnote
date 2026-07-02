@@ -14,7 +14,7 @@
         "expect": [
           {
             "method": "sendMessage",
-            "payload": { "text": "Enter your PIN to view this note." }
+            "payload": { "text": "Enter your PIN to view this note. Your PIN message will be removed after submission." }
           }
         ]
       },

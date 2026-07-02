@@ -4,6 +4,7 @@ import { confirmKeyboard, inlineButton, inlineKeyboard } from "../toolkit/index.
 import { getDomainStore } from "../store.js";
 import { verifyPin } from "../crypto.js";
 import { clock } from "../clock.js";
+import { deletePinMessage } from "../pin-utils.js";
 
 const composer = new Composer<Ctx>();
 
@@ -33,7 +34,7 @@ composer.callbackQuery(/^delete:(yes|no)$/, async (ctx) => {
 
   if (action === "yes") {
     ctx.session.step = "awaiting_pin_for_delete";
-    await ctx.editMessageText("Enter your PIN to confirm deletion.");
+    await ctx.editMessageText("Enter your PIN to confirm deletion. Your PIN message will be removed after submission.");
     await ctx.reply("Type your PIN:", {
       reply_markup: { force_reply: true, input_field_placeholder: "Your PIN…" },
     });
@@ -53,11 +54,14 @@ composer.on("message:text", async (ctx, next) => {
   const store = getDomainStore();
   const cred = store.getCredential(ctx.from!.id);
   if (!cred || !verifyPin(pin, cred)) {
+    await deletePinMessage(ctx);
     await ctx.reply("Wrong PIN. Try again.", {
       reply_markup: { force_reply: true, input_field_placeholder: "Your PIN…" },
     });
     return;
   }
+
+  await deletePinMessage(ctx);
 
   const noteId = ctx.session.deleteNoteId;
   if (!noteId) {
