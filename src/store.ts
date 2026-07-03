@@ -21,13 +21,15 @@ export interface UserMetadata {
   registeredAt: string;
   /** ISO-8601 last activity timestamp. */
   lastActivityAt: string;
+  /** Base64-encoded per-user random salt used for encryption key derivation. */
+  keySalt: string;
 }
 
 export interface NoteRecord {
   id: string;
   userId: number;
   title: string;
-  encrypted: { data: string; iv: string; salt: string };
+  encrypted: { data: string; iv: string };
   createdAt: string;
   updatedAt: string;
 }
@@ -82,11 +84,12 @@ export class DomainStore {
     return this.kv.get<UserMetadata>(K.user(userId));
   }
 
-  upsertUser(userId: number): UserMetadata {
+  upsertUser(userId: number, keySalt?: string): UserMetadata {
     const now = clock.now().toISOString();
     const existing = this.getUser(userId);
-    const record: UserMetadata = existing ?? { id: userId, registeredAt: now, lastActivityAt: now };
+    const record: UserMetadata = existing ?? { id: userId, registeredAt: now, lastActivityAt: now, keySalt: keySalt ?? "" };
     record.lastActivityAt = now;
+    if (keySalt !== undefined) record.keySalt = keySalt;
     this.kv.set(K.user(userId), record);
     return record;
   }

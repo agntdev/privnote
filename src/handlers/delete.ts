@@ -3,7 +3,6 @@ import type { Ctx } from "../bot.js";
 import { confirmKeyboard, inlineButton, inlineKeyboard } from "../toolkit/index.js";
 import { getDomainStore } from "../store.js";
 import { verifyPin } from "../crypto.js";
-import { clock } from "../clock.js";
 import { deletePinMessage } from "../pin-utils.js";
 
 const composer = new Composer<Ctx>();

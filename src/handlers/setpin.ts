@@ -1,8 +1,8 @@
 import { Composer } from "grammy";
 import type { Ctx } from "../bot.js";
-import { confirmKeyboard, registerMainMenuItem } from "../toolkit/index.js";
-import { resetDomainStore, getDomainStore } from "../store.js";
-import { createPinVerifier, verifyPin } from "../crypto.js";
+import { registerMainMenuItem } from "../toolkit/index.js";
+import { getDomainStore } from "../store.js";
+import { createPinVerifier, verifyPin, createKeySalt } from "../crypto.js";
 import { deletePinMessage } from "../pin-utils.js";
 
 const composer = new Composer<Ctx>();
@@ -59,8 +59,7 @@ composer.on("message:text", async (ctx, next) => {
   // Remove the user's PIN message from chat history
   await deletePinMessage(ctx);
   ctx.session.step = "awaiting_new_pin_confirm";
-  // Store temporarily in a new field or use a temp variable
-  // We'll store it in session since it's ephemeral
+  // Store temporarily in session (ephemeral)
   ctx.session.addTitle = pin; // reuse addTitle as temp storage
   await ctx.reply("Now enter the same PIN again to confirm.", {
     reply_markup: { force_reply: true, input_field_placeholder: "Confirm PIN…" },
@@ -87,9 +86,12 @@ composer.on("message:text", async (ctx, next) => {
   // Delete the confirmation PIN message
   await deletePinMessage(ctx);
 
+  // Generate and store key derivation salt per-user
+  const keySalt = createKeySalt();
+  getDomainStore().upsertUser(ctx.from!.id, keySalt.toString("base64"));
+
   const verifier = createPinVerifier(confirm);
   getDomainStore().setCredential(ctx.from!.id, verifier);
-  getDomainStore().upsertUser(ctx.from!.id);
 
   ctx.session.step = "idle";
   ctx.session.addTitle = undefined;

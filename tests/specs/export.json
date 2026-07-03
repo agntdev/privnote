@@ -29,5 +29,29 @@
         ]
       }
     ]
+  },
+  {
+    "name": "export with notes sends document file",
+    "steps": [
+      { "send": { "text": "/setpin" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "mypin" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "mypin" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "/add" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "Shopping list" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "Milk, eggs, bread" }, "expect": [{ "method": "sendMessage" }] },
+      { "send": { "text": "mypin" }, "expect": [{ "method": "sendMessage" }] },
+      {
+        "send": { "callback": "export:start" },
+        "expect": [
+          { "method": "editMessageText", "payload": { "text": "Enter your PIN to export all notes. Your PIN message will be removed after submission." } }
+        ]
+      },
+      {
+        "send": { "text": "mypin" },
+        "expect": [
+          { "method": "sendDocument" }
+        ]
+      }
+    ]
   }
 ]

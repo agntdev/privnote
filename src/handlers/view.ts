@@ -2,7 +2,7 @@ import { Composer } from "grammy";
 import type { Ctx } from "../bot.js";
 import { inlineButton, inlineKeyboard } from "../toolkit/index.js";
 import { getDomainStore } from "../store.js";
-import { verifyPin, decryptNote } from "../crypto.js";
+import { verifyPin, decryptNote, deriveEncryptionKey } from "../crypto.js";
 import { deletePinMessage } from "../pin-utils.js";
 
 const composer = new Composer<Ctx>();
@@ -54,7 +54,18 @@ composer.on("message:text", async (ctx, next) => {
     return;
   }
 
-  const decrypted = decryptNote(note.encrypted, pin);
+  // Derive encryption key from PIN + user's stored keySalt
+  const user = store.getUser(ctx.from!.id);
+  if (!user || !user.keySalt) {
+    ctx.session.step = "idle";
+    ctx.session.viewNoteId = undefined;
+    await ctx.reply("Encryption key not configured. Set your PIN again.");
+    return;
+  }
+  const keySalt = Buffer.from(user.keySalt, "base64");
+  const key = await deriveEncryptionKey(pin, keySalt);
+
+  const decrypted = decryptNote(note.encrypted, key);
   if (!decrypted) {
     ctx.session.step = "idle";
     ctx.session.viewNoteId = undefined;
