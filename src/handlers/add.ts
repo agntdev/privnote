@@ -2,7 +2,7 @@ import { Composer } from "grammy";
 import type { Ctx } from "../bot.js";
 import { registerMainMenuItem } from "../toolkit/index.js";
 import { getDomainStore } from "../store.js";
-import { encryptNote, verifyPin } from "../crypto.js";
+import { encryptNote, verifyPin, deriveEncryptionKey } from "../crypto.js";
 import { deletePinMessage } from "../pin-utils.js";
 
 const composer = new Composer<Ctx>();
@@ -75,7 +75,8 @@ composer.on("message:text", async (ctx, next) => {
 composer.on("message:text", async (ctx, next) => {
   if (ctx.session.step !== "awaiting_note_pin") return next();
   const pin = ctx.message.text.trim();
-  const cred = getDomainStore().getCredential(ctx.from!.id);
+  const store = getDomainStore();
+  const cred = store.getCredential(ctx.from!.id);
   if (!cred) {
     ctx.session.step = "idle";
     ctx.session.addTitle = undefined;
@@ -94,7 +95,19 @@ composer.on("message:text", async (ctx, next) => {
   // Remove the PIN message from chat history
   await deletePinMessage(ctx);
 
-  const encrypted = encryptNote(ctx.session.addBody!, pin);
+  // Derive encryption key from PIN + user's stored keySalt
+  const user = store.getUser(ctx.from!.id);
+  if (!user || !user.keySalt) {
+    ctx.session.step = "idle";
+    ctx.session.addTitle = undefined;
+    ctx.session.addBody = undefined;
+    await ctx.reply("Encryption key not configured. Set your PIN again.");
+    return;
+  }
+  const keySalt = Buffer.from(user.keySalt, "base64");
+  const key = await deriveEncryptionKey(pin, keySalt);
+
+  const encrypted = encryptNote(ctx.session.addBody!, key);
   getDomainStore().createNote(ctx.from!.id, ctx.session.addTitle!, encrypted);
 
   ctx.session.step = "idle";

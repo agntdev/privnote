@@ -2,7 +2,7 @@ import { Composer, InputFile } from "grammy";
 import type { Ctx } from "../bot.js";
 import { inlineButton, inlineKeyboard, registerMainMenuItem } from "../toolkit/index.js";
 import { getDomainStore } from "../store.js";
-import { verifyPin, decryptNote } from "../crypto.js";
+import { verifyPin, decryptNote, deriveEncryptionKey } from "../crypto.js";
 import { clock } from "../clock.js";
 import { deletePinMessage } from "../pin-utils.js";
 
@@ -55,6 +55,15 @@ composer.on("message:text", async (ctx, next) => {
   await deletePinMessage(ctx);
   ctx.session.step = "idle";
 
+  // Derive encryption key once for all notes
+  const user = store.getUser(ctx.from!.id);
+  if (!user || !user.keySalt) {
+    await ctx.reply("Encryption key not configured. Set your PIN again.");
+    return;
+  }
+  const keySalt = Buffer.from(user.keySalt, "base64");
+  const key = await deriveEncryptionKey(pin, keySalt);
+
   const noteIds = store.listNoteIds(ctx.from!.id);
   const today = clock.now().toISOString().split("T")[0];
   const lines: string[] = [`Private Notes Export — ${today}`, ""];
@@ -62,7 +71,7 @@ composer.on("message:text", async (ctx, next) => {
   for (const id of noteIds) {
     const note = store.getNote(id);
     if (!note) continue;
-    const decrypted = decryptNote(note.encrypted, pin);
+    const decrypted = decryptNote(note.encrypted, key);
     lines.push(`[${note.id}] ${note.title}`);
     lines.push("-".repeat(40));
     lines.push(decrypted ?? "[could not decrypt]");

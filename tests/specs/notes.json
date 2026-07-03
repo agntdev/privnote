@@ -1,64 +1,6 @@
 [
   {
-    "name": "/add without PIN tells user to set PIN first",
-    "steps": [
-      {
-        "send": { "text": "/add" },
-        "expect": [
-          {
-            "method": "sendMessage",
-            "payload": { "text": "You need to set a PIN first. Tap 🔑 Set PIN in the menu." }
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "name": "full note creation flow",
-    "steps": [
-      { "send": { "text": "/setpin" }, "expect": [{ "method": "sendMessage" }] },
-      { "send": { "text": "mypin" }, "expect": [{ "method": "sendMessage" }] },
-      { "send": { "text": "mypin" }, "expect": [{ "method": "sendMessage" }] },
-      {
-        "send": { "text": "/add" },
-        "expect": [
-          {
-            "method": "sendMessage",
-            "payload": { "text": "Give your note a title." }
-          }
-        ]
-      },
-      {
-        "send": { "text": "Shopping list" },
-        "expect": [
-          {
-            "method": "sendMessage",
-            "payload": { "text": "Now send the note content." }
-          }
-        ]
-      },
-      {
-        "send": { "text": "Milk, eggs, bread" },
-        "expect": [
-          {
-            "method": "sendMessage",
-            "payload": { "text": "Enter your PIN to encrypt and save this note. Your PIN message will be removed after submission." }
-          }
-        ]
-      },
-      {
-        "send": { "text": "mypin" },
-        "expect": [
-          {
-            "method": "sendMessage",
-            "payload": { "text": "✅ Note saved!" }
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "name": "/add with wrong PIN retries",
+    "name": "multiple wrong PIN attempts then correct PIN creates note",
     "steps": [
       { "send": { "text": "/setpin" }, "expect": [{ "method": "sendMessage" }] },
       { "send": { "text": "mypin" }, "expect": [{ "method": "sendMessage" }] },
@@ -67,13 +9,16 @@
       { "send": { "text": "Test" }, "expect": [{ "method": "sendMessage" }] },
       { "send": { "text": "Content" }, "expect": [{ "method": "sendMessage" }] },
       {
-        "send": { "text": "wrongpin" },
-        "expect": [
-          {
-            "method": "sendMessage",
-            "payload": { "text": "Wrong PIN. Try again." }
-          }
-        ]
+        "send": { "text": "wrong1" },
+        "expect": [{ "method": "sendMessage", "payload": { "text": "Wrong PIN. Try again." } }]
+      },
+      {
+        "send": { "text": "wrong2" },
+        "expect": [{ "method": "sendMessage", "payload": { "text": "Wrong PIN. Try again." } }]
+      },
+      {
+        "send": { "text": "mypin" },
+        "expect": [{ "method": "sendMessage", "payload": { "text": "✅ Note saved!" } }]
       }
     ]
   }

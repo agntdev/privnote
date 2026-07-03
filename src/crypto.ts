@@ -1,11 +1,11 @@
 // Crypto utilities — PIN verification and note encryption.
-// Uses Node.js built-in crypto (no external deps).
+// Uses Node.js built-in crypto (no external deps) plus Argon2id for key derivation.
 // PIN is never stored; only a salted SHA-256 verifier is persisted.
-// Note encryption uses AES-256-GCM with a key derived from PIN+note-specific salt.
+// Note encryption uses AES-256-GCM with a key derived from PIN + per-user salt via Argon2id.
 
 import { createHash, randomBytes, pbkdf2Sync, createCipheriv, createDecipheriv } from "node:crypto";
 
-// ── PIN verifier ─────────────────────────────────────────────
+// ── PIN verifier (fast pre-check before expensive key derivation) ──
 
 export interface PinVerifier {
   /** Base64-encoded SHA-256 hash of "salt + pin". */
@@ -37,44 +37,63 @@ export function verifyPin(pin: string, verifier: PinVerifier): boolean {
   return hash.toString("base64") === verifier.hash;
 }
 
-// ── Note encryption ──────────────────────────────────────────
+// ── Key derivation (Argon2id with PBKDF2 fallback) ────────────────
+
+/**
+ * Generate a 16-byte random salt for encryption key derivation.
+ */
+export function createKeySalt(): Buffer {
+  return randomBytes(16);
+}
+
+/**
+ * Derive a 32-byte AES-256 key from a PIN + per-user salt using Argon2id.
+ *
+ * Parameters (Argon2id): time=2, memory=64 MiB, parallelism=1.
+ * Falls back to PBKDF2-HMAC-SHA256 (200,000 iterations) if Argon2 is unavailable.
+ *
+ * Never store the returned key beyond the single operation it is used for.
+ */
+export async function deriveEncryptionKey(pin: string, keySalt: Buffer): Promise<Buffer> {
+  try {
+    const argon2 = (await import("argon2")).default;
+    return await argon2.hash(pin, {
+      type: argon2.argon2id,
+      timeCost: 2,
+      memoryCost: 65536, // 64 MiB
+      parallelism: 1,
+      salt: keySalt,
+      raw: true,
+      hashLength: 32,
+    }) as Buffer;
+  } catch {
+    // Argon2 unavailable — fallback to PBKDF2-HMAC-SHA256 with 200,000 iterations
+    return pbkdf2Sync(pin, keySalt, 200_000, 32, "sha256");
+  }
+}
+
+// ── Note encryption / decryption (AES-256-GCM) ────────────────────
 
 export interface EncryptedPayload {
   /** Base64-encoded ciphertext (includes GCM auth tag appended). */
   data: string;
   /** Base64-encoded random IV used for this encryption. */
   iv: string;
-  /** Base64-encoded random salt used for key derivation. */
-  salt: string;
-}
-
-const KEY_ITERATIONS = 100_000;
-const KEY_LENGTH = 32; // AES-256
-const DIGEST = "sha256";
-
-/**
- * Derive an AES-256 key from PIN + a per-encryption salt using PBKDF2.
- */
-function deriveKey(pin: string, salt: Buffer): Buffer {
-  return pbkdf2Sync(pin, salt, KEY_ITERATIONS, KEY_LENGTH, DIGEST);
 }
 
 /**
- * Encrypt plaintext with AES-256-GCM. Returns the encrypted payload
- * containing the ciphertext (with appended auth tag), IV, and salt.
+ * Encrypt plaintext with AES-256-GCM. Uses the pre-derived key (32 bytes).
+ * Returns the encrypted payload containing the ciphertext (with appended auth tag)
+ * and the IV. The per-user key salt is NOT stored per-note — it lives on the UserMetadata record.
  */
-export function encryptNote(plaintext: string, pin: string): EncryptedPayload {
-  const salt = randomBytes(16);
+export function encryptNote(plaintext: string, key: Buffer): EncryptedPayload {
   const iv = randomBytes(12); // 96-bit IV for GCM
-  const key = deriveKey(pin, salt);
   const cipher = createCipheriv("aes-256-gcm", key, iv);
   const encrypted = Buffer.concat([cipher.update(Buffer.from(plaintext, "utf-8")), cipher.final()]);
-  // Append auth tag after ciphertext
   const tag = cipher.getAuthTag();
   return {
     data: Buffer.concat([encrypted, tag]).toString("base64"),
     iv: iv.toString("base64"),
-    salt: salt.toString("base64"),
   };
 }
 
@@ -82,11 +101,9 @@ export function encryptNote(plaintext: string, pin: string): EncryptedPayload {
  * Decrypt an encrypted payload back to plaintext. Returns null on
  * wrong PIN or tampered data (auth tag mismatch → GCM throws).
  */
-export function decryptNote(payload: EncryptedPayload, pin: string): string | null {
+export function decryptNote(payload: EncryptedPayload, key: Buffer): string | null {
   try {
-    const salt = Buffer.from(payload.salt, "base64");
     const iv = Buffer.from(payload.iv, "base64");
-    const key = deriveKey(pin, salt);
     const raw = Buffer.from(payload.data, "base64");
     // Last 16 bytes are the GCM auth tag
     const tag = raw.subarray(-16);
